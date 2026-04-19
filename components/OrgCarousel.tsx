@@ -66,7 +66,7 @@ export default function OrgCarousel({ orgs }: OrgCarouselProps) {
 
       <div className="grid grid-cols-3 gap-4">
         {visible.map((org) => (
-          <OrgCard key={org.acronym} org={org} />
+          <OrgCard key={org.org_name} org={org} />
         ))}
       </div>
     </div>

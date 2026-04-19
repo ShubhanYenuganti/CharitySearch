@@ -30,55 +30,63 @@ export const mockInterpreterOutput: InterpreterOutput = {
         admin1_name: 'Darfur' },
     ]
   },
-  severity_summary: 'Sudan is experiencing one of the world\'s most severe humanitarian crises, with over 6 million children out of school due to ongoing conflict. The national risk score of 8.7/10 reflects extreme vulnerability across all dimensions, with fighting in Khartoum and Darfur displacing entire school populations.'
+  severity_summary: 'Sudan is experiencing one of the world\'s most severe education emergencies. Over 6 million children are out of school as ongoing conflict has shuttered classrooms across Khartoum and Darfur, displaced teachers, and destroyed or repurposed learning spaces. Entire school districts have been non-operational since fighting escalated in April 2023, with no near-term resolution in sight.'
 }
 
 export const mockResearcherOutput: ResearcherOutput = {
   orgs: [
     {
-      name: 'UNICEF',
-      acronym: 'UNICEF',
-      description: 'Provides education in emergencies including temporary learning spaces and teacher training in conflict-affected Sudan.',
+      org_name: 'UNICEF',
       sector: 'Education',
-      country: 'Sudan',
-      evidence_quality: 'high',
-      donate_url: 'https://www.unicef.org/donate',
-      recent_context: 'UNICEF reached 280,000 children with emergency education support in Sudan in Q1 2025.',
-      source: 'operational_presence'
+      country: 'SDN',
+      reason: 'UNICEF operates emergency education programs across Khartoum, running temporary learning spaces and distributing materials to displaced children.',
+      blurb: null,
+      donate_url: null,
+      org_impact_stats: [],
+      sector_tags: [],
+      grade_label: null,
+      alignment_score: null,
+      verified_badge: null,
     },
     {
-      name: 'Save the Children',
-      acronym: 'SCI',
-      description: 'Runs child-friendly spaces and accelerated education programs for displaced children in Darfur.',
+      org_name: 'Save the Children',
       sector: 'Education',
-      country: 'Sudan',
-      evidence_quality: 'high',
-      donate_url: 'https://www.savethechildren.org/donate',
-      recent_context: 'Save the Children reported a 40% increase in out-of-school children in Darfur since January 2024.',
-      source: 'globalgiving'
+      country: 'SDN',
+      reason: 'Runs child-friendly spaces and accelerated education programs for displaced children in Darfur, combining psychosocial support with literacy and numeracy.',
+      blurb: null,
+      donate_url: null,
+      org_impact_stats: [],
+      sector_tags: [],
+      grade_label: null,
+      alignment_score: null,
+      verified_badge: null,
     },
     {
-      name: 'Against Malaria Foundation',
-      acronym: 'AMF',
-      description: 'Distributes insecticide-treated nets — GiveWell\'s top-rated charity by cost-effectiveness.',
+      org_name: 'Against Malaria Foundation',
       sector: 'Health',
-      country: 'Sudan',
-      evidence_quality: 'high',
-      donate_url: 'https://www.againstmalaria.com/donate',
-      recent_context: 'GiveWell estimates $3,500 per life saved through AMF net distribution programs.',
-      source: 'givewell'
+      country: 'SDN',
+      reason: 'Distributes insecticide-treated bed nets in high-burden regions with rigorous independent monitoring.',
+      blurb: null,
+      donate_url: null,
+      org_impact_stats: [],
+      sector_tags: [],
+      grade_label: null,
+      alignment_score: null,
+      verified_badge: null,
     },
     {
-      name: 'Norwegian Refugee Council',
-      acronym: 'NRC',
-      description: 'Delivers education, shelter, and legal aid to internally displaced people across Sudan, with a focus on restoring access to schooling.',
+      org_name: 'Norwegian Refugee Council',
       sector: 'Education',
-      country: 'Sudan',
-      evidence_quality: 'medium',
-      donate_url: 'https://www.nrc.no/donate',
-      recent_context: 'NRC enrolled over 45,000 displaced children in accelerated learning programs in Sudan during 2024.',
-      source: 'operational_presence'
-    }
+      country: 'SDN',
+      reason: 'Delivers education, shelter, and legal aid to internally displaced people across Sudan, restoring access to schooling for out-of-school children.',
+      blurb: null,
+      donate_url: null,
+      org_impact_stats: [],
+      sector_tags: [],
+      grade_label: null,
+      alignment_score: null,
+      verified_badge: null,
+    },
   ]
 }
 

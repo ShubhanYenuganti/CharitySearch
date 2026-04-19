@@ -21,15 +21,25 @@ export interface InterpreterOutput {
 }
 
 export interface OrgResult {
-  name: string
-  acronym: string
-  description: string
+  // Available now from OrganizationRecommendation
+  org_name: string
   sector: string
   country: string
-  evidence_quality: 'high' | 'medium' | 'low'
-  donate_url: string
-  recent_context: string
-  source: 'givewell' | 'globalgiving' | 'operational_presence'
+  reason: string
+
+  // Populated by the future web agent — null/empty until then
+  blurb: string | null
+  donate_url: string | null
+  org_impact_stats: string[]
+  sector_tags: string[]
+  grade_label: string | null
+  alignment_score: number | null
+  verified_badge: string | null
+}
+
+export interface PipelineResult {
+  orgs: OrgResult[]
+  crisis_description: string
 }
 
 export interface ResearcherOutput {
