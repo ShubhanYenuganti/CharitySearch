@@ -42,7 +42,24 @@ export default function ScoredOrgCard({ org }: { org: ScoredOrg }) {
         {org.verified_badge}
       </span>
 
-      <p className="text-xs text-text-secondary leading-relaxed flex-1">{org.blurb}</p>
+      <p className="text-xs text-text-secondary leading-relaxed">{org.blurb}</p>
+
+      {(org.alignment_rationale || org.impact_rationale) && (
+        <div className="space-y-1.5">
+          {org.alignment_rationale && (
+            <div>
+              <p className="text-xs text-text-muted font-medium">Geographic fit</p>
+              <p className="text-xs text-text-muted leading-relaxed">{org.alignment_rationale}</p>
+            </div>
+          )}
+          {org.impact_rationale && (
+            <div>
+              <p className="text-xs text-text-muted font-medium">Impact</p>
+              <p className="text-xs text-text-muted leading-relaxed">{org.impact_rationale}</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {org.org_impact_stats.length > 0 && (
         <ul className="space-y-1">

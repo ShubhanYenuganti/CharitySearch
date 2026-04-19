@@ -12,12 +12,12 @@ const PREFIX_STYLES: Record<string, string> = {
   '!': 'text-red-500 dark:text-red-400',
 }
 
-export default function PipelineLog({ entries }: { entries: LogEntry[] }) {
+export default function PipelineLog({ entries, active = false }: { entries: LogEntry[]; active?: boolean }) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [entries.length])
+  }, [entries.length, active])
 
   const visible = entries.filter(
     (e) => e.event.type !== 'hapi_warning' && eventToLogMessage(e.event) !== null,
@@ -44,6 +44,13 @@ export default function PipelineLog({ entries }: { entries: LogEntry[] }) {
             </div>
           )
         })}
+        {active && (
+          <div className="flex items-start gap-3 text-xs leading-relaxed">
+            <span className="shrink-0 text-text-muted tabular-nums w-10" />
+            <span className="shrink-0 w-3 text-text-muted animate-pulse">◌</span>
+            <span className="text-text-muted animate-pulse tracking-widest">...</span>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
     </div>

@@ -155,7 +155,7 @@ export default function ResultsClient() {
 
       {/* Live pipeline log — hidden once complete */}
       {activityLog.length > 0 && step !== 'complete' && (
-        <PipelineLog entries={activityLog} />
+        <PipelineLog entries={activityLog} active={step !== 'error'} />
       )}
 
       {/* Scored organizations */}
