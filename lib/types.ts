@@ -16,6 +16,8 @@ export interface InterpreterOutput {
     operational_presence: HdxOperationalPresence[]
   }
   severity_summary: string
+  /** Set by the route handler when HDX HAPI was unreachable and cached data was used. */
+  hapi_stale?: boolean
 }
 
 export interface OrgResult {
@@ -41,3 +43,9 @@ export type AgentStep =
   | 'narrating'
   | 'complete'
   | 'error'
+
+export type PipelineError =
+  | { stage: 'interpreter'; kind: 'bad_query';  message: string }
+  | { stage: 'interpreter'; kind: 'hapi_down';  message: string }
+  | { stage: 'researcher';  kind: 'failed';     message: string }
+  | { stage: 'narrator';    kind: 'timeout';    message: string }

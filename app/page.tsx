@@ -29,7 +29,7 @@ export default function Home() {
         quality={90}
       />
 
-      {/* Overlay: warm-tinted dark veil so city lights still glow through */}
+      {/* Overlay: warm-tinted dark veil so city lights still glow */}
       <div className="absolute inset-0 bg-linear-to-b from-black/70 via-black/60 to-black/75" />
 
       {/* Content */}
@@ -39,7 +39,7 @@ export default function Home() {
             CharitySearch
           </h1>
           <p className="text-white/60 leading-relaxed">
-            Find high-impact humanitarian organizations matched to the crises
+            Find high-impact humanitarian organizations matched to the issues
             that matter to you.
           </p>
         </div>

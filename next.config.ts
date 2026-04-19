@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
         hostname: 'eoimages.gsfc.nasa.gov',
       },
     ],
+    qualities: [75, 90],
   },
 }
 

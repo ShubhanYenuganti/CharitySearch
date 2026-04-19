@@ -83,7 +83,7 @@ export default function CrisisStats({ data }: CrisisStatsProps) {
           label="Severity score"
           value={overallRisk !== 'N/A' ? `${overallRisk} / 10` : 'N/A'}
           sub="National risk index"
-          tooltip="This is the UN OCHA Inform Risk Index — a composite measure of a country's vulnerability to humanitarian crisis, based on hazard exposure, societal fragility, and coping capacity. It is not a ranking of how severe one crisis is compared to another."
+          tooltip="This is the UN OCHA Inform Risk Index — a composite measure of a country's vulnerability to humanitarian crisis based on hazard exposure, societal fragility, and coping capacity. It is not a ranking of how severe one crisis is compared to another."
         />
         <StatCard
           label="People in need"
