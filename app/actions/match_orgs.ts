@@ -319,8 +319,10 @@ async function queryOperationalPresence(input: OperationalPresenceToolInput) {
 async function executeTool(
   toolName: string,
   rawInput: unknown,
+  onEvent?: (e: { tool: string; params: Record<string, unknown> }) => void,
 ): Promise<unknown> {
   const input = asObject(rawInput);
+  onEvent?.({ tool: toolName, params: input });
 
   switch (toolName) {
     case "query_refugees":
@@ -347,6 +349,7 @@ export interface OrganizationRecommendation {
 
 export async function queryMatchingOrganizations(
   userPrompt: string,
+  onEvent?: (e: { tool: string; params: Record<string, unknown> }) => void,
 ): Promise<OrganizationRecommendation[]> {
   if (!userPrompt.trim()) {
     throw new Error("A user prompt is required.");
@@ -414,7 +417,7 @@ export async function queryMatchingOrganizations(
     const toolResults = await Promise.all(
       toolUseBlocks.map(async (toolUse) => {
         try {
-          const result = await executeTool(toolUse.name, toolUse.input);
+          const result = await executeTool(toolUse.name, toolUse.input, onEvent);
           return {
             type: "tool_result" as const,
             tool_use_id: toolUse.id,

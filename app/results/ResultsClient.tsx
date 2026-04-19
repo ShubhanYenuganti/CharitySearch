@@ -4,83 +4,130 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import AgentProgress from '@/components/AgentProgress'
-import OrgCarousel from '@/components/OrgCarousel'
+import CrisisContext from '@/components/CrisisContext'
+import ScoredOrgCards from '@/components/ScoredOrgCards'
 import ReportStream from '@/components/ReportStream'
+import PipelineLog from '@/components/PipelineLog'
 import PipelineNotice from '@/components/PipelineNotice'
-import { AgentStep, OrgResult, PipelineError, ResearcherOutput } from '@/lib/types'
-import { queryMatchingOrganizations, OrganizationRecommendation } from '@/app/actions/match_orgs'
-import { summarizeCountryIssuesFromOrganizations } from '@/app/actions/country-issues-summary'
+import type { AgentStep, PipelineInterpretation, ScoredOrg } from '@/lib/types'
+import type { PipelineEvent, LogEntry } from '@/lib/pipeline/events'
 
 const EXAMPLE_QUERIES = ['Education in Sudan', 'Healthcare in Yemen', 'Food security in Ethiopia']
 
 export default function ResultsClient() {
   const searchParams = useSearchParams()
-  const router = useRouter()
-  const query = searchParams.get('q')
+  const router       = useRouter()
+  const query        = searchParams.get('q')
 
-  const [step, setStep] = useState<AgentStep>('idle')
-  const [researcherData, setResearcherData] = useState<ResearcherOutput | null>(null)
-  const [crisisDescription, setCrisisDescription] = useState('')
-  const [reportContent] = useState('')
-  const [streaming] = useState(false)
-  const [pipelineError, setPipelineError] = useState<PipelineError | null>(null)
-  const started = useRef(false)
+  const [step,           setStep]           = useState<AgentStep>('idle')
+  const [crisisContext,  setCrisisContext]  = useState<PipelineInterpretation | null>(null)
+  const [scoredOrgs,     setScoredOrgs]     = useState<ScoredOrg[]>([])
+  const [reportContent,  setReportContent]  = useState('')
+  const [streaming,      setStreaming]       = useState(false)
+  const [activityLog,    setActivityLog]    = useState<LogEntry[]>([])
+  const [pipelineError,  setPipelineError]  = useState<string | null>(null)
+
+  const started   = useRef(false)
+  const startTime = useRef(Date.now())
+  const logId     = useRef(0)
 
   useEffect(() => {
     if (started.current) return
     started.current = true
-    if (!query) {
-      router.replace('/')
-      return
-    }
+    if (!query) { router.replace('/'); return }
+    startTime.current = Date.now()
     runPipeline(query)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query])
 
+  function appendLog(event: PipelineEvent) {
+    setActivityLog((prev) => [
+      ...prev,
+      { id: String(logId.current++), elapsed_ms: Date.now() - startTime.current, event },
+    ])
+  }
+
+  function handleEvent(event: PipelineEvent) {
+    appendLog(event)
+
+    switch (event.type) {
+      case 'stage':
+        if (event.stage === 'matching' || event.stage === 'enriching') setStep('interpreting')
+        if (event.stage === 'fetching' || event.stage === 'scoring')   setStep('researching')
+        if (event.stage === 'narrating')                               setStep('narrating')
+        break
+      case 'interpretation':
+        setCrisisContext({
+          country_name:   event.country_name,
+          location_code:  event.location_code,
+          issue:          event.issue,
+          sectors:        event.sectors,
+          crisis_type:    event.crisis_type,
+          presence_count: event.presence_count,
+          needs_data:     event.needs_data,
+        })
+        break
+      case 'scored':
+        setScoredOrgs(event.organizations)
+        break
+      case 'narration_chunk':
+        setStreaming(true)
+        setReportContent((prev) => prev + event.text)
+        break
+      case 'done':
+        setStep('complete')
+        setStreaming(false)
+        break
+      case 'error':
+        setPipelineError(event.message)
+        setStep('error')
+        setStreaming(false)
+        break
+    }
+  }
+
   async function runPipeline(q: string) {
-    // ── Stage 1: Match organizations ─────────────────────────────────────────
     setStep('interpreting')
-    let orgs: OrganizationRecommendation[]
+    setPipelineError(null)
+
     try {
-      orgs = await queryMatchingOrganizations(q)
-      const mapped: OrgResult[] = orgs.map((rec) => ({
-        org_name: rec.org_name,
-        sector: rec.sector,
-        country: rec.country,
-        reason: rec.reason,
-        blurb: null,
-        donate_url: null,
-        org_impact_stats: [],
-        sector_tags: [],
-        grade_label: null,
-        alignment_score: null,
-        verified_badge: null,
-      }))
-      setResearcherData({ orgs: mapped })
-    } catch {
-      setPipelineError({
-        stage: 'researcher',
-        kind: 'failed',
-        message: 'We could not find matching organizations. Please try rephrasing your query.',
-      })
+      const response = await fetch(`/api/pipeline?q=${encodeURIComponent(q)}`)
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}))
+        setPipelineError((body as any).error ?? `Pipeline returned ${response.status}`)
+        setStep('error')
+        return
+      }
+
+      const reader  = response.body!.getReader()
+      const decoder = new TextDecoder()
+      let   buffer  = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() ?? ''
+
+        for (const part of parts) {
+          for (const line of part.split('\n')) {
+            if (line.startsWith('data: ')) {
+              try {
+                handleEvent(JSON.parse(line.slice(6)) as PipelineEvent)
+              } catch { /* malformed — skip */ }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      setPipelineError(message)
       setStep('error')
-      return
+      setStreaming(false)
     }
-
-    // ── Stage 2: Summarize country issues ─────────────────────────────────────
-    setStep('researching')
-    try {
-      const result = await summarizeCountryIssuesFromOrganizations(orgs)
-      setCrisisDescription(result.description)
-    } catch {
-      setPipelineError({
-        stage: 'researcher',
-        kind: 'failed',
-        message: 'The crisis overview could not be generated. Organization recommendations above are still accurate.',
-      })
-    }
-
-    setStep('complete')
   }
 
   return (
@@ -88,15 +135,10 @@ export default function ResultsClient() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-widest text-text-muted mb-1 font-medium">
-            Results for
-          </p>
+          <p className="text-xs uppercase tracking-widest text-text-muted mb-1 font-medium">Results for</p>
           <h1 className="text-xl font-semibold text-foreground">{query}</h1>
         </div>
-        <Link
-          href="/"
-          className="text-sm text-text-muted hover:text-foreground transition-colors mt-1"
-        >
+        <Link href="/" className="text-sm text-text-muted hover:text-foreground transition-colors mt-1">
           ← New search
         </Link>
       </div>
@@ -104,19 +146,14 @@ export default function ResultsClient() {
       {/* Agent progress */}
       {step !== 'idle' && <AgentProgress step={step} />}
 
-      {/* Org fetch error */}
-      {pipelineError?.stage === 'researcher' && !researcherData && (
+      {/* Error */}
+      {step === 'error' && pipelineError && (
         <div className="space-y-5">
-          <PipelineNotice variant="error" title="No results found">
-            {pipelineError.message} Try one of these examples:
-          </PipelineNotice>
+          <PipelineNotice variant="error" title="Pipeline error">{pipelineError}</PipelineNotice>
           <div className="flex flex-wrap gap-2">
             {EXAMPLE_QUERIES.map((q) => (
-              <Link
-                key={q}
-                href={`/results?q=${encodeURIComponent(q)}`}
-                className="px-3 py-1.5 rounded-full text-xs border border-border text-text-secondary bg-surface-subtle hover:border-accent hover:text-accent transition-colors"
-              >
+              <Link key={q} href={`/results?q=${encodeURIComponent(q)}`}
+                className="px-3 py-1.5 rounded-full text-xs border border-border text-text-secondary bg-surface-subtle hover:border-accent hover:text-accent transition-colors">
                 {q}
               </Link>
             ))}
@@ -124,41 +161,31 @@ export default function ResultsClient() {
         </div>
       )}
 
-      {/* Crisis overview */}
-      {crisisDescription && (
+      {/* Live pipeline log — hidden once complete */}
+      {activityLog.length > 0 && step !== 'complete' && (
+        <PipelineLog entries={activityLog} />
+      )}
+
+      {/* Crisis context */}
+      {crisisContext && (
         <section className="space-y-3">
-          <h2 className="text-xs uppercase tracking-widest text-text-muted font-medium">
-            Crisis overview
-          </h2>
-          <p className="text-sm leading-relaxed text-text-secondary max-w-3xl">
-            {crisisDescription}
-          </p>
-          <p className="text-xs text-text-muted">Reported by UN OCHA / HDX HAPI</p>
+          <h2 className="text-xs uppercase tracking-widest text-text-muted font-medium">Crisis overview</h2>
+          <CrisisContext data={crisisContext} />
         </section>
       )}
 
-      {/* Org cards */}
-      {researcherData && (
+      {/* Scored organizations */}
+      {scoredOrgs.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-xs uppercase tracking-widest text-text-muted font-medium">
-            Recommended organizations
-          </h2>
-          {researcherData.orgs.length > 0 ? (
-            <OrgCarousel orgs={researcherData.orgs} />
-          ) : (
-            <PipelineNotice variant="info" title="No organizations found">
-              No matching organizations were identified for this query. Please try a different search.
-            </PipelineNotice>
-          )}
+          <h2 className="text-xs uppercase tracking-widest text-text-muted font-medium">Recommended organizations</h2>
+          <ScoredOrgCards orgs={scoredOrgs} />
         </section>
       )}
 
-      {/* Narrator report — not triggered in current pipeline; retained for future use */}
-      {researcherData && (reportContent || streaming) && (
+      {/* Narration report */}
+      {(reportContent || streaming) && (
         <section className="space-y-3">
-          <h2 className="text-xs uppercase tracking-widest text-text-muted font-medium">
-            Analysis
-          </h2>
+          <h2 className="text-xs uppercase tracking-widest text-text-muted font-medium">Analysis</h2>
           <div className="bg-surface border border-border rounded-md px-7 py-6">
             <ReportStream content={reportContent} streaming={streaming} />
           </div>

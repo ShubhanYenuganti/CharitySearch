@@ -60,6 +60,18 @@ export type PipelineError =
   | { stage: 'researcher';  kind: 'failed';     message: string }
   | { stage: 'narrator';    kind: 'timeout';    message: string }
 
+// ── Pipeline interpretation (SSE stream) ──────────────────────────────────────
+
+export interface PipelineInterpretation {
+  country_name: string
+  location_code: string
+  issue: string
+  sectors: string[]
+  crisis_type: string
+  presence_count: number
+  needs_data: object[]
+}
+
 // ── Agent pipeline I/O ────────────────────────────────────────────────────────
 
 /** One entry in the fetch agent's `results` array, derived from HAPI operational presence. */
