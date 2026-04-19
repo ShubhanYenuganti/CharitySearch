@@ -7,9 +7,20 @@ interface ReportStreamProps {
   streaming: boolean
 }
 
+function ensureFirstLineIsHeader(text: string): string {
+  const firstNewline = text.indexOf('\n')
+  const firstLine = firstNewline === -1 ? text : text.slice(0, firstNewline)
+  const rest = firstNewline === -1 ? '' : text.slice(firstNewline)
+  if (firstLine && !firstLine.startsWith('#')) {
+    return `# ${firstLine}${rest}`
+  }
+  return text
+}
+
 export default function ReportStream({ content, streaming }: ReportStreamProps) {
+  const normalised = ensureFirstLineIsHeader(content)
   return (
-    <div className="max-w-2xl">
+    <div>
       <div className="report-prose">
         <ReactMarkdown
           components={{
@@ -20,7 +31,7 @@ export default function ReportStream({ content, streaming }: ReportStreamProps) 
             ),
           }}
         >
-          {content}
+          {normalised}
         </ReactMarkdown>
       </div>
       {streaming && <span className="cursor-blink" aria-hidden="true" />}

@@ -4,12 +4,11 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import AgentProgress from '@/components/AgentProgress'
-import CrisisContext from '@/components/CrisisContext'
 import ScoredOrgCards from '@/components/ScoredOrgCards'
 import ReportStream from '@/components/ReportStream'
 import PipelineLog from '@/components/PipelineLog'
 import PipelineNotice from '@/components/PipelineNotice'
-import type { AgentStep, PipelineInterpretation, ScoredOrg } from '@/lib/types'
+import type { AgentStep, ScoredOrg } from '@/lib/types'
 import type { PipelineEvent, LogEntry } from '@/lib/pipeline/events'
 
 const EXAMPLE_QUERIES = ['Education in Sudan', 'Healthcare in Yemen', 'Food security in Ethiopia']
@@ -20,7 +19,6 @@ export default function ResultsClient() {
   const query        = searchParams.get('q')
 
   const [step,           setStep]           = useState<AgentStep>('idle')
-  const [crisisContext,  setCrisisContext]  = useState<PipelineInterpretation | null>(null)
   const [scoredOrgs,     setScoredOrgs]     = useState<ScoredOrg[]>([])
   const [reportContent,  setReportContent]  = useState('')
   const [streaming,      setStreaming]       = useState(false)
@@ -55,17 +53,6 @@ export default function ResultsClient() {
         if (event.stage === 'matching' || event.stage === 'enriching') setStep('interpreting')
         if (event.stage === 'fetching' || event.stage === 'scoring')   setStep('researching')
         if (event.stage === 'narrating')                               setStep('narrating')
-        break
-      case 'interpretation':
-        setCrisisContext({
-          country_name:   event.country_name,
-          location_code:  event.location_code,
-          issue:          event.issue,
-          sectors:        event.sectors,
-          crisis_type:    event.crisis_type,
-          presence_count: event.presence_count,
-          needs_data:     event.needs_data,
-        })
         break
       case 'scored':
         setScoredOrgs(event.organizations)
@@ -164,14 +151,6 @@ export default function ResultsClient() {
       {/* Live pipeline log — hidden once complete */}
       {activityLog.length > 0 && step !== 'complete' && (
         <PipelineLog entries={activityLog} />
-      )}
-
-      {/* Crisis context */}
-      {crisisContext && (
-        <section className="space-y-3">
-          <h2 className="text-xs uppercase tracking-widest text-text-muted font-medium">Crisis overview</h2>
-          <CrisisContext data={crisisContext} />
-        </section>
       )}
 
       {/* Scored organizations */}
