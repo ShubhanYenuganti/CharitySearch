@@ -8,8 +8,17 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 You are the developer of an application named CharitySearch, an advising service that cross-references charity impact data with humanitarian statistics to recommend humanitarian organizations to donate to. CharitySearch provides recommandations by region, demographic, and impact sector.
 
-On the backend, humanitarian data is pulled from the Humanitarian Data Exchange HAPI, which can be found at `https://hapi.humdata.org/`. The HAPI spec can be found in the local file `hapi.json` for your reference. **ALWAYS** refer to this resource when generating API calls on the backend.
+On the backend, humanitarian data is pulled from the Humanitarian Data Exchange HAPI, which can be found at `https://hapi.humdata.org/`. The HAPI spec can be found in the local file `hapi.json` for your reference. **ALWAYS** refer to this resource when generating API calls on the backend. HAPI provides the following types of information:
 
-Reasoning over the data is provided by the Claude family of LLMs through Anthropic's TypeScript SDK (`npm` package `@anthropic-ai/sdk`).
+- Affected People
+- Coordination & Context
+- Food Security, Nutrition & Poverty
+- Geography & Infrastructure
+- Climate
+- Metadata
+
+Types for the HAPI, as well as the wrapper `fetchFromHapi`, can be found in `lib/hapi`.
+
+Reasoning over the data is provided by the Claude family of LLMs through Anthropic's TypeScript SDK (`npm` package `@anthropic-ai/sdk`). A convenience wrapper for the Anthropic SDK can be found in `lib/anthropic`.
 
 <!-- END:user-agent-rules -->
