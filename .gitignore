@@ -41,3 +41,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 /apitest/
+
+# openspec
+.codex
+.opencode
+openspec
