@@ -340,6 +340,8 @@ async function executeTool(
 
 export interface OrganizationRecommendation {
   org_name: string;
+  sector: string;
+  country: string;
   reason: string;
 }
 
@@ -365,8 +367,10 @@ export async function queryMatchingOrganizations(
         "Use the provided HAPI tools whenever they are needed.",
         "Location codes are ISO 3166 alpha-3 codes.",
         "When the user asks by need (not by country), you may run broad queries and synthesize findings from returned data.",
+        "If the user specifies a country or set of countries, prefer organizations specific to those countries.",
         "Use operational-presence to identify organizations active in relevant countries and sectors.",
-        "When done, prioritize a concise list of organization names and why they fit the user's need.",
+        "When done, return organizations with name, specialization sector, country, and why they fit the user's need.",
+        'For country: use an ISO-3 code (e.g. "AFG") only when the recommendation is specific to one country; otherwise return an empty string "".',
       ].join("\n"),
       messages,
       output_config: {
@@ -379,9 +383,11 @@ export async function queryMatchingOrganizations(
                 type: "object",
                 properties: { 
                   org_name: { type: "string" },
+                  sector: { type: "string" },
+                  country: { type: "string", pattern: "^$|^[A-Z]{3}$" },
                   reason: { type: "string" },
                 },
-                required: ["org_name", "reason"],
+                required: ["org_name", "sector", "country", "reason"],
               },
             },
           },
