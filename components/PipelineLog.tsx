@@ -19,7 +19,9 @@ export default function PipelineLog({ entries }: { entries: LogEntry[] }) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }, [entries.length])
 
-  const visible = entries.filter((e) => eventToLogMessage(e.event) !== null)
+  const visible = entries.filter(
+    (e) => e.event.type !== 'hapi_warning' && eventToLogMessage(e.event) !== null,
+  )
   if (visible.length === 0) return null
 
   return (

@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { jsonSchemaOutputFormat } from '@anthropic-ai/sdk/helpers/json-schema'
 import { fetchFromHapi } from '@/lib/hapi/client'
 import { queryMatchingOrganizations } from '@/app/actions/match_orgs'
-import type { PipelineCandidate, VerifiedOrg, ScoringInput, ScoringOutput, ScoredOrg } from '@/lib/types'
+import type { PipelineCandidate, VerifiedOrg, ScoringInput, ScoringOutput, ScoredOrg, UnverifiedCandidate } from '@/lib/types'
 import type { PipelineEvent } from '@/lib/pipeline/events'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -214,18 +214,36 @@ export async function* runPipeline(
     currentStage = 'enriching'
     yield { type: 'stage', stage: 'enriching' }
 
+    // location_code must be exactly 3 letters (ISO 3166 alpha-3).
+    // An empty string or longer value would reach HAPI as location_code=<invalid>
+    // and trigger a 400/422. Fall back to location_name when the code is absent or malformed.
+    const isValidLocationCode = /^[A-Za-z]{3}$/.test(interp.location_code ?? '')
+    const locationQuery = {
+      ...(isValidLocationCode
+        ? { location_code: interp.location_code.toUpperCase() }
+        : interp.country_name?.trim()
+          ? { location_name: interp.country_name.trim() }
+          : {}),
+    }
+
     const [presenceResult, needsResult] = await Promise.allSettled([
-      fetchFromHapi('/api/v2/coordination-context/operational-presence', { query: { location_code: interp.location_code } }),
-      fetchFromHapi('/api/v2/affected-people/humanitarian-needs',        { query: { location_code: interp.location_code } }),
+      fetchFromHapi('/api/v2/coordination-context/operational-presence', { query: locationQuery }),
+      fetchFromHapi('/api/v2/affected-people/humanitarian-needs',        { query: locationQuery }),
     ])
 
     const presenceData = presenceResult.status === 'fulfilled' ? (presenceResult.value.data ?? []) : []
     const needsData    = needsResult.status    === 'fulfilled' ? (needsResult.value.data    ?? []) : []
 
-    if (presenceResult.status === 'rejected')
-      yield { type: 'hapi_warning', endpoint: 'operational-presence', message: String((presenceResult as any).reason?.message ?? presenceResult.reason) }
-    if (needsResult.status === 'rejected')
-      yield { type: 'hapi_warning', endpoint: 'humanitarian-needs',   message: String((needsResult as any).reason?.message    ?? needsResult.reason) }
+    if (presenceResult.status === 'rejected') {
+      const msg = String((presenceResult as any).reason?.message ?? presenceResult.reason)
+      console.warn('[pipeline] HAPI operational-presence failed:', msg, '| locationQuery:', locationQuery)
+      yield { type: 'hapi_warning', endpoint: 'operational-presence', message: msg }
+    }
+    if (needsResult.status === 'rejected') {
+      const msg = String((needsResult as any).reason?.message ?? needsResult.reason)
+      console.warn('[pipeline] HAPI humanitarian-needs failed:', msg, '| locationQuery:', locationQuery)
+      yield { type: 'hapi_warning', endpoint: 'humanitarian-needs', message: msg }
+    }
 
     yield {
       type: 'interpretation',
@@ -279,7 +297,13 @@ export async function* runPipeline(
 
     await (client.beta.environments as any).delete(environment.id).catch(() => {})
 
-    const rawVerifiedOrgs: unknown[] = (fetchOutput as any)?.verified_orgs ?? []
+    const rawVerifiedOrgs: unknown[]      = (fetchOutput as any)?.verified_orgs ?? []
+    const rawUnverified:   unknown[]      = (fetchOutput as any)?.unverified_candidates ?? []
+    const unverifiedCandidates: UnverifiedCandidate[] = rawUnverified.map((u) => ({
+      org:    String((u as any).org    ?? ''),
+      reason: String((u as any).reason ?? ''),
+    })).filter((u) => u.org)
+
     if (rawVerifiedOrgs.length === 0) {
       yield { type: 'error', message: 'Fetch agent returned no verified organizations.', stage: 'fetching' }
       return
@@ -306,6 +330,7 @@ export async function* runPipeline(
     })
 
     yield { type: 'verified', count: verifiedOrgs.length, org_names: verifiedOrgs.map((o) => o.official_name) }
+    yield { type: 'unverified_candidates', count: unverifiedCandidates.length, candidates: unverifiedCandidates }
 
     // ── Stage: scoring ─────────────────────────────────────────────────────────
     currentStage = 'scoring'

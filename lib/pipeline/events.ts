@@ -1,4 +1,4 @@
-import type { PipelineCandidate, ScoredOrg } from '@/lib/types'
+import type { PipelineCandidate, ScoredOrg, UnverifiedCandidate } from '@/lib/types'
 
 export type PipelineEvent =
   | { type: 'stage';           stage: 'matching' | 'enriching' | 'fetching' | 'scoring' | 'narrating' }
@@ -9,7 +9,8 @@ export type PipelineEvent =
   | { type: 'candidates';      count: number; orgs: PipelineCandidate[] }
   | { type: 'tool_call';       tool: string; url: string; id: string }
   | { type: 'tool_result';     tool: string; url: string; duration_ms: number }
-  | { type: 'verified';        count: number; org_names: string[] }
+  | { type: 'verified';               count: number; org_names: string[] }
+  | { type: 'unverified_candidates';  count: number; candidates: UnverifiedCandidate[] }
   | { type: 'scored';          organizations: ScoredOrg[] }
   | { type: 'narration_chunk'; text: string }
   | { type: 'done' }
@@ -73,6 +74,8 @@ export function eventToLogMessage(event: PipelineEvent): string | null {
       return `${event.tool}  ${event.url}  ${event.duration_ms}ms`
     case 'verified':
       return `${event.count} org(s) verified: ${event.org_names.join(', ')}`
+    case 'unverified_candidates':
+      return event.count > 0 ? `${event.count} org(s) could not be verified` : null
     case 'scored':
       return `Scored: ${event.organizations.map((o) => o.org_name).join(', ')}`
     case 'error':

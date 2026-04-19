@@ -5,10 +5,11 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import AgentProgress from '@/components/AgentProgress'
 import ScoredOrgCards from '@/components/ScoredOrgCards'
+import UnverifiedOrgCards from '@/components/UnverifiedOrgCards'
 import ReportStream from '@/components/ReportStream'
 import PipelineLog from '@/components/PipelineLog'
 import PipelineNotice from '@/components/PipelineNotice'
-import type { AgentStep, ScoredOrg } from '@/lib/types'
+import type { AgentStep, ScoredOrg, UnverifiedCandidate } from '@/lib/types'
 import type { PipelineEvent, LogEntry } from '@/lib/pipeline/events'
 
 const EXAMPLE_QUERIES = ['Education in Sudan', 'Healthcare in Yemen', 'Food security in Ethiopia']
@@ -18,12 +19,13 @@ export default function ResultsClient() {
   const router       = useRouter()
   const query        = searchParams.get('q')
 
-  const [step,           setStep]           = useState<AgentStep>('idle')
-  const [scoredOrgs,     setScoredOrgs]     = useState<ScoredOrg[]>([])
-  const [reportContent,  setReportContent]  = useState('')
-  const [streaming,      setStreaming]       = useState(false)
-  const [activityLog,    setActivityLog]    = useState<LogEntry[]>([])
-  const [pipelineError,  setPipelineError]  = useState<string | null>(null)
+  const [step,                 setStep]                 = useState<AgentStep>('idle')
+  const [scoredOrgs,           setScoredOrgs]           = useState<ScoredOrg[]>([])
+  const [unverifiedCandidates, setUnverifiedCandidates] = useState<UnverifiedCandidate[]>([])
+  const [reportContent,        setReportContent]        = useState('')
+  const [streaming,            setStreaming]             = useState(false)
+  const [activityLog,          setActivityLog]          = useState<LogEntry[]>([])
+  const [pipelineError,        setPipelineError]        = useState<string | null>(null)
 
   const started   = useRef(false)
   const startTime = useRef(Date.now())
@@ -56,6 +58,9 @@ export default function ResultsClient() {
         break
       case 'scored':
         setScoredOrgs(event.organizations)
+        break
+      case 'unverified_candidates':
+        setUnverifiedCandidates(event.candidates)
         break
       case 'narration_chunk':
         setStreaming(true)
@@ -158,6 +163,14 @@ export default function ResultsClient() {
         <section className="space-y-3">
           <h2 className="text-xs uppercase tracking-widest text-text-muted font-medium">Recommended organizations</h2>
           <ScoredOrgCards orgs={scoredOrgs} />
+        </section>
+      )}
+
+      {/* Unverified organizations */}
+      {unverifiedCandidates.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-xs uppercase tracking-widest text-text-muted font-medium">Also considered</h2>
+          <UnverifiedOrgCards candidates={unverifiedCandidates} />
         </section>
       )}
 

@@ -80,6 +80,12 @@ export interface PipelineCandidate {
   reason: string
 }
 
+/** A candidate the fetch agent could not verify (no official name / donate URL / impact stat). */
+export interface UnverifiedCandidate {
+  org: string
+  reason: string
+}
+
 /** A single org fact object returned by the fetch agent via `return_verified_orgs`. */
 export interface VerifiedOrg {
   official_name: string

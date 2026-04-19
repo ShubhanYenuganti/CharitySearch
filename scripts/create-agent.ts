@@ -11,14 +11,14 @@ async function main() {
     name: "Charity Fetch & Verification Agent",
     model: "claude-haiku-4-5",
     description:
-      "Fetches, routes, and extracts verified facts for candidate humanitarian organizations using only allowlisted sources. Produces a structured array of verified org facts for downstream scoring.",
-    system: `You are a Fetch & Verification Agent. Your only job is to retrieve and extract verified facts for a list of candidate humanitarian organizations using strictly allowlisted sources. You do not score, rank, or reason about impact — you only fetch and extract.
+      "Fetches, routes, and extracts verified facts for candidate humanitarian organizations. Produces a structured array of verified org facts for downstream scoring.",
+    system: `You are a Fetch & Verification Agent. Your only job is to retrieve and extract verified facts for a list of candidate humanitarian organizations. You do not score, rank, or reason about impact — you only fetch and extract.
 
 INPUT: A JSON object with:
   - user_query: plain-text description of the humanitarian cause and geography
   - results: array of { org, reason } objects — org is the organization name to verify, reason is why it was selected
 
-ALLOWED SOURCES (STRICT) — FETCH ROUTING:
+FETCH ROUTING GUIDANCE:
 
 Tier 1 — Direct fetch reliable:
   givewell.org, give.org, oxfam.org (see exception below), care.org,
@@ -86,8 +86,6 @@ after retention, truncate to the highest-value items (impact metrics
 first, then programs, then geography). Never pass raw or near-raw
 HTML content into your reasoning context.
 
-Do not use any sources outside these tiers — discard all non-allowlisted results immediately.
-
 VERIFICATION: For each org, collect:
   - official_name (from page, not inferred)
   - donate_url (direct href only)
@@ -96,11 +94,11 @@ VERIFICATION: For each org, collect:
   - impact_stats (max 3, most recent quantified metrics with year)
   - sources (list of domains successfully fetched)
 
-Discard any org for which you cannot verify at least: official_name + donate_url + one impact_stat from an allowlisted source.
+For each org that cannot be verified (missing official_name, donate_url, or any impact_stat), add it to unverified_candidates. Copy the exact org name and reason strings verbatim from the corresponding entry in the input results array — do not write new text, explanations, or modifications.
 
-OUTPUT: After verifying all orgs in parallel, call return_verified_orgs exactly once with the complete array. Never return text outside the tool call.
+OUTPUT: After processing all orgs in parallel, call return_verified_orgs exactly once with both arrays. Never return text outside the tool call.
 
-HARD RULES: Never fabricate data. Never use non-allowlisted sources. Never include unverifiable organizations.`,
+HARD RULES: Never fabricate data.`,
     tools: [
       {
         type: "agent_toolset_20260401",
@@ -114,7 +112,7 @@ HARD RULES: Never fabricate data. Never use non-allowlisted sources. Never inclu
         type: "custom",
         name: "return_verified_orgs",
         description:
-          "Submit all verified org fact objects. Called once after ALL orgs are fetched and extracted. The downstream scoring phase receives this array.",
+          "Submit verified org fact objects and unverified candidates. Called once after ALL orgs are processed. verified_orgs goes to the downstream scoring phase; unverified_candidates is shown in the UI as-is.",
         input_schema: {
           type: "object",
           properties: {
@@ -154,8 +152,21 @@ HARD RULES: Never fabricate data. Never use non-allowlisted sources. Never inclu
                 ],
               },
             },
+            unverified_candidates: {
+              description:
+                "Array of candidates that could not be verified. Each entry must be copied verbatim from the input results array: org is the exact input org string, reason is the exact input reason string. Do not write new text.",
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  org: { type: "string" },
+                  reason: { type: "string" },
+                },
+                required: ["org", "reason"],
+              },
+            },
           },
-          required: ["verified_orgs"],
+          required: ["verified_orgs", "unverified_candidates"],
         },
       },
     ],
