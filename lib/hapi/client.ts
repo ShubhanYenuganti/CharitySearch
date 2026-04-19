@@ -19,7 +19,7 @@ export type HapiQuery<P extends HapiGetPath> = OperationFor<
 > extends {
   parameters?: { query?: infer Q };
 }
-  ? Q
+  ? Omit<Q, "app_identifier">
   : never;
 
 export type HapiResponse<P extends HapiGetPath> = OperationFor<
@@ -64,7 +64,12 @@ export async function fetchFromHapi<P extends HapiGetPath>(
 ): Promise<HapiResponse<P>> {
   const baseUrl = options.baseUrl ?? DEFAULT_HAPI_BASE_URL;
   const url = new URL(String(path), baseUrl);
+  const appIdentifier = process.env.HAPI_APP_IDENTIFIER;
+  if (!appIdentifier) {
+    throw new Error("HAPI_APP_IDENTIFIER is not set.");
+  }
 
+  url.searchParams.append("app_identifier", appIdentifier);
   if (options.query && typeof options.query === "object") {
     for (const [key, rawValue] of Object.entries(options.query)) {
       if (rawValue === undefined || rawValue === null) {
