@@ -16,8 +16,8 @@ export default function UnverifiedOrgCards({ candidates }: { candidates: Unverif
 
           <p className="text-xs text-text-muted leading-relaxed flex-1">{c.reason}</p>
 
-          <p className="text-xs text-text-muted italic">
-            Could not retrieve organization information.
+          <p className="text-xs text-text-muted leading-relaxed border-t border-border pt-3 mt-1">
+            Our AI was unable to retrieve verifiable data for this organization from our sources. This does not mean the organization is fraudulent or ineffective — we simply could not confirm details independently.
           </p>
         </div>
       ))}

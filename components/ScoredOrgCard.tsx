@@ -12,7 +12,7 @@ function deriveRelevanceTag(org: ScoredOrg): { label: string; className: string 
   const isStrong = grade_label === 'Strong'
   const isCriticalSector = sector_tags.some((t) => t === 'Emergency' || t === 'Nutrition')
 
-  if (alignment_score >= 8 && (isExceptional || isStrong))
+  if (alignment_score >= 9 && (isExceptional || isStrong))
     return { label: 'Best Match', className: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800' }
   if (alignment_score >= 8)
     return { label: 'Strong Match', className: 'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-800' }
