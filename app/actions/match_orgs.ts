@@ -338,41 +338,9 @@ async function executeTool(
   }
 }
 
-function extractAssistantText(
-  content: Anthropic.Message["content"],
-): string {
-  return content
-    .filter((block) => block.type === "text")
-    .map((block) => block.text)
-    .join("\n")
-    .trim();
-}
-
 export interface OrganizationRecommendation {
   org_name: string;
   reason: string;
-}
-
-function parseOrganizationRecommendations(raw: string): OrganizationRecommendation[] {
-  let parsed: unknown;
-
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error("Failed to parse structured organization output.");
-  }
-
-  if (!Array.isArray(parsed)) {
-    throw new Error("Structured organization output must be an array.");
-  }
-
-  return parsed
-    .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
-    .map((item) => ({
-      org_name: typeof item.org_name === "string" ? item.org_name : "",
-      reason: typeof item.reason === "string" ? item.reason : "",
-    }))
-    .filter((item) => item.org_name.trim().length > 0 && item.reason.trim().length > 0);
 }
 
 export async function queryMatchingOrganizations(
