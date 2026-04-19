@@ -3,23 +3,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getAnthropicClient } from "@/lib/anthropic/client";
 import { fetchFromHapi } from "@/lib/hapi/client";
+import { jsonSchemaOutputFormat } from '@anthropic-ai/sdk/helpers/json-schema.mjs';
 
-const MAX_TOOL_ROUNDS = 5;
+const MAX_TOOL_ROUNDS = 8;
 const DEFAULT_MODEL: Anthropic.Model = "claude-sonnet-4-5";
 const DEFAULT_MAX_TOKENS = 1200;
 const DEFAULT_LIMIT = 15;
-const ORGANIZATION_OUTPUT_SCHEMA = {
-  type: "array",
-  items: {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      org_name: { type: "string" },
-      reason: { type: "string" },
-    },
-    required: ["org_name", "reason"],
-  },
-} as const;
 
 const POPULATION_GROUP_PAIRS = [
   ["REF", "Refugees"],
@@ -386,37 +375,6 @@ function parseOrganizationRecommendations(raw: string): OrganizationRecommendati
     .filter((item) => item.org_name.trim().length > 0 && item.reason.trim().length > 0);
 }
 
-async function generateStructuredOrganizationOutput(
-  client: Anthropic,
-  messages: Anthropic.MessageParam[],
-): Promise<OrganizationRecommendation[]> {
-  const response = await client.messages.create({
-    model: DEFAULT_MODEL,
-    max_tokens: DEFAULT_MAX_TOKENS,
-    messages: [
-      ...messages,
-      {
-        role: "user",
-        content:
-          "Return only JSON matching the required schema: an array of { org_name, reason } objects for the best matching organizations.",
-      },
-    ],
-    output_config: {
-      format: {
-        type: "json_schema",
-        schema: ORGANIZATION_OUTPUT_SCHEMA,
-      },
-    },
-  });
-
-  const text = extractAssistantText(response.content);
-  if (!text) {
-    throw new Error("Anthropic returned no structured organization output.");
-  }
-
-  return parseOrganizationRecommendations(text);
-}
-
 export async function queryMatchingOrganizations(
   userPrompt: string,
 ): Promise<OrganizationRecommendation[]> {
@@ -431,7 +389,7 @@ export async function queryMatchingOrganizations(
   ];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
-    const response = await client.messages.create({
+    const response = await client.messages.parse({
       model: DEFAULT_MODEL,
       max_tokens: DEFAULT_MAX_TOKENS,
       system: [
@@ -443,6 +401,25 @@ export async function queryMatchingOrganizations(
         "When done, prioritize a concise list of organization names and why they fit the user's need.",
       ].join("\n"),
       messages,
+      output_config: {
+        format: jsonSchemaOutputFormat({
+          type: "object",
+          properties: {
+            organizations: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: { 
+                  org_name: { type: "string" },
+                  reason: { type: "string" },
+                },
+                required: ["org_name", "reason"],
+              },
+            },
+          },
+          required: ["organizations"],
+        }),
+      },
       tools,
       tool_choice: { type: "auto" },
     });
@@ -457,7 +434,7 @@ export async function queryMatchingOrganizations(
     );
 
     if (toolUseBlocks.length === 0) {
-      return generateStructuredOrganizationOutput(client, messages);
+      return (response.parsed_output?.organizations as OrganizationRecommendation[]) ?? [];
     }
 
     const toolResults = await Promise.all(
